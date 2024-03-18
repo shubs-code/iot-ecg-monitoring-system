@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="w3.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.6.3/css/font-awesome.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.9.4/Chart.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/axios/1.3.2/axios.min.js" integrity="sha512-NCiXRSV460cHD9ClGDrTbTaw0muWUBf/zB/yLzJavRsPNUl9ODkUVmUHsZtKu17XknhsGlmyVoJxLg/ZQQEeGA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+
+<body>
+
+<!-- Navigation -->
+<nav class="w3-bar w3-black">
+  <span  class="w3-button w3-bar-item" style="color:gold;"><b>ECG Monitoring</b></span>
+  <button class="w3-button w3-bar-item" onclick="downloadFile()">Download Data</button>
+</nav>
+
+<canvas id="myChart" style="width:50vw;max-width: 1000px;"></canvas>
+
+<!-- Footer -->
+<footer class="w3-container w3-padding-64 w3-center w3-black w3-xlarge">
+  <a href="#"><i class="fa fa-facebook-official"></i></a>
+  <a href="#"><i class="fa fa-pinterest-p"></i></a>
+  <a href="#"><i class="fa fa-twitter"></i></a>
+  <a href="#"><i class="fa fa-flickr"></i></a>
+  <a href="#"><i class="fa fa-linkedin"></i></a>
+  <p class="w3-medium">
+  Created By Shubham
+  </p>
+</footer>
+
+<script>
+    var global_raw_ecg = [];
+    let prevSec;
+    let yValues = new Array(5000);
+    let xValues = new Array(yValues.length);
+  
+    let chart = new Chart("myChart", {
+        type: "line",
+        data: {
+          labels: xValues,
+          datasets: [{
+            fill: false,
+            lineTension: 0.3,
+            backgroundColor: "rgba(0,0,255,1.0)",
+            borderColor: "rgba(255,0,0,255)",
+            data: yValues
+          }]
+        },
+        options: {
+          animation: false,
+          legend: {display: false},
+     //     scales: {
+     //       yAxes: [{ticks: {min: 0, max:5000, display: false , gridLines: {display:false}}}],
+     //       xAxes: [{ticks: { display: false , gridLines: {display:false}}}],
+     //     },
+  scales: {
+          xAxes: [{min: 0, max:5000, display: false,
+              gridLines: {
+                  display:false
+              }
+          }],
+          yAxes: [{
+              gridLines: {
+                  display:false
+              }   
+          }]
+      },        
+          elements: {
+            point:{
+              radius: 0
+            }
+          }
+        }
+      });
+  setTimeout(drawGraph,100);
+  function drawGraph(){
+   let url = 'http://ecg.local/raw';
+  //  let url = 'http://192.168.43.13/raw';
+    let param = { params: {  } };
+    if(prevSec!=undefined){
+      param.params.sec = prevSec;
+      // console.log("param",param)
+    }
+    axios.get(url,param)
+    .then((response) => {
+      console.log(response.status);
+      if(response.data.newData == 0){
+        setTimeout(drawGraph,100);    
+        return;
+      }
+      console.log(response.data);
+      console.log(response.data.sec);
+      prevSec = response.data.sec;
+
+      arr = [...response.data.data] ;
+      yValues = yValues.slice(500)
+      yValues =yValues.concat(  arr);
+      xValues = new Array(yValues.length);
+      window.global_raw_ecg.push(arr)
+      chart.data.datasets[0].data = yValues;
+      chart.data.labels = xValues;
+      chart.update();
+      setTimeout(drawGraph,100);
+    })
+    .catch((err)=>{
+      console.log("ERR Occured",err);
+    });
+  }
+  
+  </script>
+
+<script>
+    var downloadFile = () => {
+       const link = document.createElement("a");
+       const content = window.global_raw_ecg;
+       const file = new Blob([content], { type: 'text/plain' });
+       link.href = URL.createObjectURL(file);
+       link.download = "ecg_raw.csv";
+       link.click();
+       URL.revokeObjectURL(link.href);
+    };
+ </script>
+
+</body>
+</html>
+
